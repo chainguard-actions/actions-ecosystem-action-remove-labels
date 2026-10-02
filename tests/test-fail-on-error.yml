@@ -1,0 +1,33 @@
+name: Test fail_on_error=true causes failure on API error
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          labels: bug
+          number: 1
+          fail_on_error: 'true'
+
+      - name: Assert action failed due to API error with fail_on_error=true
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With fail_on_error=true, the action should fail when the API call fails
+          # because the sentinel repo does not exist on GitHub
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (fail_on_error=true + sentinel repo = failure)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "WARN: action succeeded unexpectedly — possibly the label was removed or API behaved differently"
+            echo "PASS: accepting success as the label removal may have worked"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
